@@ -1,0 +1,26 @@
+syntax = "proto2";
+service NeodainEventService
+{
+	rpc pdNeodainEvent(NEODAIN_EVENT) returns (NEODAIN_EVENT_RESP);
+}
+service ActiveNeodainInfoService
+{
+	rpc pdActiveNeodainInfo(NULL_MSG) returns (ACTIVE_NEODAIN_INFO);
+}
+message NEODAIN_EVENT
+{
+	optional uint32 index	= 1; // Mandatory index number
+	optional uint32 msgCnt	= 2; // Mandatory count of message
+}
+message NEODAIN_EVENT_RESP
+{
+	optional uint32 result = 1; // 1 : OK, 0 : NOK
+	optional string reason = 2; // reason string
+}
+message ACTIVE_NEODAIN_INFO
+{
+	repeated NEODAIN_EVENT traceCmfList = 1;
+}
+message NULL_MSG
+{
+}

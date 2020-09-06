@@ -1,0 +1,49 @@
+#include <iostream>
+#include <iomanip>
+#include <cstdlib>
+
+#include <functional>
+
+#if __libstdc__
+template <class Fn, class... Args>
+/* unspecified */ bind(Fn&& fn, Args&&... args) // functional
+
+template <class charT>
+/* unspecified */ put_time(const struct tm* tmb, const charT* fmt) // iomainip
+#endif
+
+void print_Int(int x)
+{
+	printf("%d argument is %s\n", x, (x)? "true" : "false");
+}
+
+void print_Bool(bool x)
+{
+	std::cout << x << " Input argument is " << ((x)? "true" : "false") << std::endl;
+
+	// std::boolalpha : 1-> "true", 0-> "false"
+	// Relieve --> std::noboolalpha
+	std::cout << "bool type data is printed with " << std::boolalpha << x << " and " << !x << std::endl;
+}
+
+int main()
+{
+	bool ok=true;
+	bool notok=false;
+
+	print_Int(100);
+	print_Bool(ok);
+
+	std::cout << "bool type " << notok << " is " << std::noboolalpha << notok << std::endl;
+
+	std::boolalpha(std::cout);
+	std::cout << "bool type " << notok << " is " << std::noboolalpha << notok << std::endl;
+
+	bool isTrue;
+
+	// input stream string is dealed with bool type data
+	std::cin >> std::boolalpha >> isTrue;	
+	std::boolalpha(std::cout); 	// output with string like "true/false"
+								// use 'std::noboolalpha' for output with "0/1"
+	std::cout << isTrue << " = " << (isTrue == true) << std::endl;
+}

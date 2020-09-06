@@ -1,0 +1,415 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+
+#include <mutex>
+#include <thread>
+
+#include "CMutex.h"
+#include "CLock.h"
+
+#include <cpprest/http_client.h>
+#include <cpprest/filestream.h>
+
+#include <google/protobuf/arena.h>
+
+#include "AddressBook.pb.h"
+
+using namespace std;
+
+using namespace utility;
+using namespace web;
+using namespace web::http;
+using namespace web::http::client;
+using namespace concurrency::streams;
+
+
+// This function fills in a Person message based on user input.
+void PromptForAddress(Person* person)
+{
+    cout << "Enter person ID number: ";
+    int32_t id;
+    cin >> id;
+
+    person->set_id(id);
+    cin.ignore(256, '\n'); // empty input stream
+
+    cout << "Enter name: ";
+    getline(cin, *person->mutable_name());
+
+    cout << "Enter email address (blank for none): ";
+    string email;
+    getline(cin, email);
+    if (!email.empty())
+    {
+        person->set_email(email);
+    }
+
+    while (true)
+    {
+        cout << "Enter a phone number (or leave blank to finish): ";
+        string number;
+        getline(cin, number);
+        if (number.empty())
+        {
+            break;
+        }
+        // tutorial::Person::PhoneNumber* phone_number = person->add_phones();
+        Person::PhoneNumber* phone_number = person->add_phones();
+        phone_number->set_number(number);
+
+        cout << "Is this a mobile, home, or work phone? ";
+        string type;
+        getline(cin, type);
+        if (type == "mobile")
+        {
+            phone_number->set_type(Person::MOBILE);
+        }
+        else if (type == "home")
+        {
+            phone_number->set_type(Person::HOME);
+        }
+        else if (type == "work")
+        {
+            phone_number->set_type(Person::WORK);
+        }
+        else
+        {
+            cout << "Unknown phone type.  Using default." << endl;
+        }
+    }
+}
+
+// Iterates though all people in the AddressBook and prints info about them.
+void ListPeople(const AddressBook& address_book)
+{
+    for (int32_t i = 0; i < address_book.people_size(); i++)
+    {
+        const Person& person = address_book.people(i);
+        cout << "Person ID: " << person.id() << endl;
+        cout << "  Name: " << person.name() << endl;
+
+        if (person.has_email())
+        {
+            cout << "  E-mail address: " << person.email() << endl;
+        }
+        for (int j = 0; j < person.phones_size(); j++)
+        {
+            const Person::PhoneNumber& phone_number = person.phones(j);
+            switch (phone_number.type())
+            {
+                case Person::MOBILE:
+                    cout << "  Mobile phone #: ";
+                    break;
+                case Person::HOME:
+                    cout << "  Home phone #: ";
+                                                                                          break;
+                case Person::WORK:
+                    cout << "  Work phone #: ";
+                    break;
+            }
+            cout << phone_number.number() << endl;
+        }
+    }
+}
+
+
+class ITestImp
+{
+  public:
+    ITestImp() { }
+    virtual ~ITestImp() { }
+    virtual void getHttp()=0;
+
+  private:
+    ITestImp(const ITestImp& inTestImp);
+    ITestImp& operator=(const ITestImp& inTestImp);
+};
+
+
+class CTestHttpImp : ITestImp
+{
+  public:
+    CTestHttpImp()
+    {
+        cout << "[CTestHttpImp] created" << endl;
+    }
+    virtual ~CTestHttpImp()
+    {
+        cout << "[CTestHttpImp] deleted" << endl;
+    }
+
+    void getHttp()
+    {
+        cout << "[CTestHttpImp::getHttp] called" << endl;
+        try
+        {
+            // http_client client(U("http://en.cppreference.com/w/"));
+            // http_client client(U("http://redmine.ericssonlg.com/redmine"));
+            http_client client(U("http://localhost"));
+            auto resp = client.request(U("GET")).get();
+
+            cout << U("STATUS : ") << resp.status_code() << endl;
+            cout << "content-type : " << resp.headers().content_type() << endl;
+            cout << resp.extract_string(true).get() << endl;
+        }
+        catch (const std::exception &e)
+        {
+            cout << "[CTestHttpImp::getHttp] error is " << e.what() << endl;
+        }
+    }
+  private:
+    CTestHttpImp(const CTestHttpImp& inImp);
+    CTestHttpImp& operator=(const CTestHttpImp& inImp);
+};
+
+
+class CTestAsyncHttpImp : ITestImp
+{
+  public:
+    CTestAsyncHttpImp()
+    {
+        cout << "[CTestAyncHttpImp] created" << endl;
+    }
+    virtual ~CTestAsyncHttpImp()
+    {
+        cout << "[CTestAsyncHttpImp] deleted" << endl;
+    }
+
+    void getHttp()
+    {
+        cout << "[CTestAsyncHttpImp::getAsyncHttp] called" << endl;
+        try
+        {
+            // http_client client(U("http://en.cppreference.com/w/"));
+            // http_client client(U("http://redmine.ericssonlg.com/redmine"));
+            http_client client(U("http://localhost"));
+
+            client.request(U("GET")).then(
+                [](http_response resp)
+                {
+                    cout << U("STATUS : ") << resp.status_code() << endl;
+                    cout << "content-type : " << resp.headers().content_type() << endl;
+                    resp.extract_string(true).then(
+                        [](string_t sBoby)
+                        {
+                            cout << sBoby << endl;
+                        }
+                    ).wait();
+                }
+            ).wait();
+        }
+        catch (const std::exception &e)
+        {
+            cout << "[CTestAsyncHttpImp::getAsyncHttp] error is " << e.what() << endl;
+        }
+    }
+
+  private:
+    CTestAsyncHttpImp(const CTestAsyncHttpImp& inImp);
+    CTestAsyncHttpImp& operator=(const CTestAsyncHttpImp& inImp);
+};
+
+
+class CTestJsonHttpImp : ITestImp
+{
+  public:
+    CTestJsonHttpImp()
+    {
+        cout << "[CTestJsonHttpImp] created" << endl;
+    }
+    virtual ~CTestJsonHttpImp()
+    {
+        cout << "[CTestJsonHttpImp] deleted" << endl;
+    }
+
+    void getHttp()
+    {
+        cout << "[CTestJsonHttpImp::getJson] called" << endl;
+        try
+        {
+            // http_client client(U("http://date.jsontest.com/"));
+            // http_client client(U("http://redmine.ericssonlg.com/redmine"));
+            http_client client(U("http://localhost"));
+            http_request req(methods::GET);
+
+            client.request(req).then(
+                [=](http_response r)
+                {
+                    cout << U("STATUS : ") << r.status_code() << endl;
+                    cout << "content-type : " << r.headers().content_type() << endl;
+                    //{
+                    //      "time": "11:25:23 AM",
+                    //      "milliseconds_since_epoch" : 1423999523092,
+                    //      "date" : "02-15-2015"
+                    //}
+                    r.extract_json(true).then(
+                        [](json::value v)
+                        {
+                            cout << v.at(U("date")).as_string() << endl;
+                            cout << v.at(U("time")).as_string() << endl;
+                        }
+                    ).wait();
+                }
+            ).wait();
+        }
+        catch (const std::exception &e)
+        {
+            cout << "[CTestJsonHttpImp::getJson] error is " << e.what() << endl;
+        }
+    }
+  private:
+    CTestJsonHttpImp(const CTestJsonHttpImp& inImp);
+    CTestJsonHttpImp& operator=(const CTestJsonHttpImp& inImp);
+};
+
+
+class CTest;
+void coutType(CTest* test);
+
+class CTest
+{
+  enum { SYNC_HTTP = 0, ASYNC_HTTP, C_JSON };
+
+  public:
+    CTest(): mutex_m(), mt_m(), pImp_m(nullptr), cbf_num(0)
+    {
+        cout << "[CTest] created" << endl;
+        lock_guard<mutex> lock(mt_m);
+        CLock clock(&mutex_m);
+        pImp_m = reinterpret_cast<ITestImp *>(new CTestHttpImp());
+    }
+    CTest(ITestImp* inTestImp): mutex_m(), mt_m(), pImp_m(inTestImp), cbf_num(0)
+    {
+        cout << "[CTest] created by ITestImp" << endl;
+        lock_guard<mutex> lock(mt_m);
+        CLock clock(&mutex_m);
+        pImp_m = inTestImp;
+        thread th_m(coutType, this);
+        th_m.detach();
+        // thread th_m(pImp_m->getHttp); // error reason : non static function
+    }
+    ~CTest()
+    {
+        cout << "[CTest] deleted" << endl;
+        if(pImp_m != nullptr) delete pImp_m;
+    }
+    void getHttp()
+    {
+        cout << "[CTest] getHttp" << endl;
+        if(pImp_m == nullptr) return;
+        lock_guard<mutex> lock(mt_m);
+        CLock clock(&mutex_m);
+        pImp_m->getHttp();
+    }
+  private:
+    void create()
+    {
+        cout << "[CTest] thread create" << endl;
+        // th_m([&pImp_m]() { pImp_m->getHttp(); });
+        // std::thread ti(coutType);
+        // std::thread ti(pImp_m->getHttp);
+
+        cout << "[CTest] thread start" << endl;
+                                                                     // th_m.detach();
+        // this_thread::sleep_for(chrono::seconds(5));
+        cout << "[CTest] thread detached" << endl;
+    }
+    CTest(const CTest& inTest);
+    CTest& operator=(const CTest& inTest);
+    CMutex mutex_m;
+    mutex mt_m;
+    ITestImp *pImp_m;
+    uint32_t cbf_num;
+};
+
+void coutType(CTest* test)
+{
+    cout << "[coutType] Instance : " << test << endl;
+    test->getHttp();
+
+#if 0
+    cout << "==============================" << endl;
+    cout << "char       : " << sizeof(char) << endl;
+    cout << "char*      : " << sizeof(char *) << endl;
+    cout << "uint8_t    : " << sizeof(uint8_t) << endl;
+    cout << "int8_t     : " << sizeof(int8_t) << endl;
+    cout << "uint16_t   : " << sizeof(uint16_t) << endl;
+    cout << "int16_t    : " << sizeof(int16_t) << endl;
+    cout << "uint32_t   : " << sizeof(uint32_t) << endl;
+    cout << "int32_t    : " << sizeof(int32_t) << endl;
+    cout << "uint64_t   : " << sizeof(uint64_t) << endl;
+    cout << "int64_t    : " << sizeof(int64_t) << endl;
+    cout << "short      : " << sizeof(short) << endl;
+    cout << "int        : " << sizeof(int) << endl;
+    cout << "long       : " << sizeof(long) << endl;
+    cout << "long long  : " << sizeof(long long) << endl;
+    cout << "==============================" << endl;
+#endif
+
+}
+
+
+int main(int argc, char* argv[])
+{
+    cout << "Hellow world" << endl;
+
+    // Main function:  Reads the entire address book from a file,
+    //   adds one person based on user input, then writes it back out to the same
+    //   file.
+
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+    // GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+    if (argc != 2)
+    {
+        cerr << ">>> Usage:  " << argv[0] << " ADDRESS_BOOK_FILE" << endl;
+        return -1;
+    }
+
+    // tutorial::AddressBook address_book;
+    AddressBook address_book;
+
+    {
+        // Read the existing address book.
+        std::fstream input(argv[1], std::fstream::in | std::fstream::binary);
+        if (!input)
+        {
+            cout << argv[1] << ": File not found.  Creating a new file." << endl;
+            // Add an address.
+            PromptForAddress(address_book.add_people());
+            {
+                // Write the new address book back to disk.
+                std::fstream output(argv[1], std::fstream::out | std::fstream::trunc | std::fstream::binary);
+                if (!address_book.SerializeToOstream(&output))
+                {
+                    cerr << ">>> Failed to write address book." << endl;
+                    return -1;
+                }
+            }
+        }
+        else if (!address_book.ParseFromIstream(&input))
+        {
+            cerr << ">>> Failed to parse address book." << endl;
+            return -1;
+        }
+        else
+        {
+        }
+    }
+
+    ListPeople(address_book);
+
+    // Optional:  Delete all global objects allocated by libprotobuf.
+    // google::protobuf::ShutdownProtobufLibrary();
+
+    // CTest myTest1(reinterpret_cast<ITestImp*>(new CTestHttpImp));
+    // CTest myTest2(reinterpret_cast<ITestImp*>(new CTestAsyncHttpImp));
+    // CTest myTest3(reinterpret_cast<ITestImp*>(new CTestJsonHttpImp));
+
+    // pause();
+
+    return 0;
+}
+

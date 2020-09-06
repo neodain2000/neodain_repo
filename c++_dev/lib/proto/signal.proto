@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package Cmf;
+
+message Signal {
+    extensions 1000 to 65535;
+}
+

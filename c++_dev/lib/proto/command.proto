@@ -1,0 +1,78 @@
+syntax = "proto2";
+
+import "google/protobuf/descriptor.proto";
+
+package Cmf;
+
+service Commander {
+  rpc Send(Request) returns (Response) { }
+}
+
+message Request {
+    required int32 num = 1;
+    optional string json = 2;
+}
+
+message Response {
+    required bool success = 1;
+    required string msg = 2;
+}
+
+message CommandList
+{
+    optional string category = 100;
+    repeated OneCommand commandList = 200;
+}
+
+message OneCommand {
+
+    extensions 1000 to 9999;
+
+    required string name = 100;
+    required string description = 110;
+    required InterfaceInfo interfaceInfo = 120;
+    optional bool confirm = 160;
+    optional int32 userlevel = 170;
+    repeated Parameter parameterList = 200;
+}
+
+message Parameter {
+    enum Type { BOOLEAN = 0; INTEGER = 10; STRING = 20; ENUM = 30; }
+
+    optional string name = 100;
+    optional Type type = 200;
+    optional string description = 300;
+    optional bool mandatory = 400;
+    optional string property = 500;
+    optional bool hidden = 600;
+    optional string default_val = 700;
+}
+
+message Operation {
+    optional string OPERATION = 1;
+}
+
+message InterfaceInfo {
+    required string uri = 10;
+    required int32 num = 20;
+    required string method = 30;
+}
+
+message cmdOptions {
+
+    enum Type { NOT=1; OPT=2; MAN=3; }
+
+    optional Type dis = 1;
+    optional Type crte = 2;
+    optional Type chg = 3;
+    optional Type del = 4;
+}
+
+extend google.protobuf.FieldOptions {
+    optional cmdOptions cmdoption = 2000;
+    optional string property = 2001;
+    optional bool hidden = 2002;
+
+    optional bool dbkey = 3000;
+}
+

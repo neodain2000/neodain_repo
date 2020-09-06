@@ -1,0 +1,29 @@
+#ifndef __NEODAIN_APP_NEO_MAIN_C__
+
+#include "neodain_os.h"
+
+namespace osal = neodain::neo::os;
+
+int main()
+{
+	std::cout << "pid : " << osal::pid() << std::endl;
+	char *name = nullptr;
+	try {
+		neodain::neo::app::MyFunc(name);
+	} catch (neodain::neo_ex& e) {
+		std::cerr << e.what() << std::endl;
+	} catch (std::runtime_error& e) {
+		std::cerr << e.what() << std::endl;
+	} catch (std::exception& e) {
+		std::cerr << e.what() << std::endl;
+	} catch (int e) {
+		std::cerr << e << std::endl;
+	} catch (...) {
+		std::cerr << "all exception proceed." << std::endl;
+	}
+	return 0;
+}	
+
+
+#endif // __NEODAIN_APP_NEO_MAIN_C__
+

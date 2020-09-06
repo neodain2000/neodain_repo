@@ -1,0 +1,36 @@
+#include <iostream>
+
+// Unnamed namespace
+namespace
+{
+	void SampleMethod()
+	{
+		std::cout << "Unnamed namespace : SampleMethod()" << std::endl;
+	}
+}
+
+namespace sample 
+{
+	void SampleMethod()
+	{
+		::SampleMethod();
+		std::cout << "> Sample inner SampleMethod function" << std::endl;
+	}
+
+	namespace nested
+	{
+		void SampleMethod()
+		{
+			std::cout << "> Nested inner SampleMethod function" << std::endl;
+		}
+	}
+}
+
+int main()
+{
+	sample::SampleMethod();
+	sample::nested::SampleMethod();
+	SampleMethod();
+	::SampleMethod();
+	return 0;
+}

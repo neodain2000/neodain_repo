@@ -1,0 +1,50 @@
+// __NEODAIN_APP_NEO_DOOR_MAIN_C__
+
+#include <stdio.h>
+#include <iostream>
+#include <string>
+#include "door.h"
+
+#ifdef __cplusplus // if use C++ compiler, need to be compiled by C-compiler
+extern "C" {
+#endif
+
+void myCFunction();
+int open(const char *pathname, int flags);
+
+#ifdef __cplusplus // So, deal with extern variable or function
+}
+#endif
+
+#ifdef __cplusplus // Even if be implemented with C++, can be used in C-code
+extern "C" void handler(int) {
+	std::cout << "Callback window\n";
+}
+#endif
+
+namespace P_Neodain {
+
+void Door::Open() {
+	State(OPEN);
+}
+
+void Door::Close() {
+	State(CLOSE);
+}
+
+void Door::ShowState() const {
+	std::cout << "Present Door State : " << std::endl;
+	std::cout << ((state == OPEN)? "OPEN" : "CLOSE") << std::endl;
+}
+
+} // namespace P_Neodain
+
+
+int main() {
+	P_Neodain::Door d;
+
+	d.Open();
+	d.ShowState();
+	return 0;
+}
+

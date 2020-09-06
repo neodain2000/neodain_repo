@@ -1,0 +1,44 @@
+// #ifndef DIR_FUNCS_H
+// #define DIR_FUNCS_H
+
+#inlcude "neodain_os.h"
+#include <vector>
+
+using std::vector;
+
+enum DIRTYPE { DT_DIR=0x00, DT_FILE=0x01 };
+
+const uint32_t FILENAME_MAX = 100;
+
+struct DIR_ITEM {
+    char name[FILENAME_MAX];
+    DIRTYPE type;
+    size_t size;
+};
+
+#define DIR_LIST vector<DIR_ITEM>
+//Sort Modes
+ #define DSM_DEF 0x00
+ #define DSM_ASC 0x00
+ #define DSM_DESC 0x01
+ #define DSM_NAME 0x00
+ #define DSM_SIZE 0x02
+extern int DSORT_MODE;
+//Whether to sort directories in their own part or with the group
+extern bool DSORT_INCLUDE_DIR;
+extern bool DSORT_CASE; //Whether to care about casing or not
+
+bool ScanDir(char *dname,DIR_LIST *pOut,bool doSize=false,bool doSort=false,bool includeAll=false);
+
+struct FS_FORMAT {
+ float size;
+ int level;
+};
+extern char FS_TYPE[][3];
+extern long FS_LEVELS;
+extern size_t FS_LIMIT;
+
+void fsize_format(size_t bytes,FS_FORMAT *out);
+
+// #endif //DIR_FUNCS_H
+
